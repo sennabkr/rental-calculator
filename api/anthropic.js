@@ -1,7 +1,7 @@
-// Gemini proxy — forwards requests to Google Gemini 2.0 Flash with Search grounding
+// Gemini proxy — forwards requests to Google Gemini 2.5 Flash with Search grounding
 // Environment variables needed in Vercel:
 //   GEMINI_API_KEY   — your Google AI Studio key
-//   ALLOWED_ORIGIN   — your site URL e.g. https://yourdomain.com (optional but recommended)
+//   ALLOWED_ORIGIN   — your site URL e.g. https://yourdomain.com (optional)
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -26,14 +26,18 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0.1 }
+          generationConfig: {
+            temperature: 0.1,
+            // Limit thinking to keep responses fast and within token budget
+            thinkingConfig: { thinkingBudget: 0 }
+          }
         })
       }
     );
