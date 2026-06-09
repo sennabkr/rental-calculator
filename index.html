@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rental Cost Calculator</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap">
+<style>
+  /* ── CONFIG ─────────────────────────────────────────── */
+  :root {
+    --accent: #1a8c5c;
+    --accent-light: #d4edda;
+    --accent-text: #155724;
+    --danger: #c0392b;
+    --danger-light: #fdecea;
+    --warn: #d4900a;
+    --border: #e2e2de;
+    --border-strong: #c8c8c2;
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface2: #f2f2ef;
+    --text: #1a1a18;
+    --text2: #5a5a56;
+    --text3: #9a9a94;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+
+  .page-header { max-width: 1100px; margin: 0 auto 1.5rem; }
+  .page-header h1 { font-size: 22px; font-weight: 500; }
+  .page-header p { font-size: 14px; color: var(--text2); margin-top: 4px; }
+
+  .layout { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+  .panel-title { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .panel-title i { font-size: 17px; color: var(--accent); }
+  .panel-desc { font-size: 12px; color: var(--text3); margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+
+  .sec-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); margin: 1.1rem 0 0.6rem; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .field label { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+  .field input, .field select { font-size: 13px; width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s; }
+  .field input:focus, .field select:focus { border-color: var(--border-strong); }
+  .field input.flash { background: var(--accent-light); transition: background 0.4s; }
+  .pfx-wrap { position: relative; }
+  .pfx-wrap .pfx { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text3); pointer-events: none; }
+  .pfx-wrap input { padding-left: 19px; }
+  .looked-up { font-size: 10px; color: var(--accent); background: var(--accent-light); padding: 1px 6px; border-radius: 4px; }
+
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .toggle-row:last-child { border-bottom: none; }
+  .tl-text { font-size: 13px; color: var(--text); }
+  .tl-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .tl-right { display: flex; align-items: center; gap: 8px; }
+  .tl-right input[type="number"] { width: 78px; font-size: 13px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); outline: none; }
+  .tl-right input[type="number"]:focus { border-color: var(--border-strong); }
+  .pfx-sm { position: relative; }
+  .pfx-sm .p { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text3); pointer-events: none; }
+  .pfx-sm input { padding-left: 16px !important; }
+  .sw { position: relative; width: 32px; height: 18px; flex-shrink: 0; }
+  .sw input { opacity: 0; width: 0; height: 0; }
+  .sw-track { position: absolute; cursor: pointer; inset: 0; background: var(--border-strong); border-radius: 18px; transition: 0.2s; }
+  .sw-track:before { content: ''; position: absolute; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+  .sw input:checked + .sw-track { background: var(--accent); }
+  .sw input:checked + .sw-track:before { transform: translateX(14px); }
+
+  .btn { width: 100%; margin-top: 1rem; padding: 9px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn:hover { background: var(--border); }
+
+  .results { background: var(--surface2); border-radius: var(--radius-sm); padding: 1rem; margin-top: 1rem; display: none; }
+  .results.show { display: block; }
+  .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.75rem; }
+  .res-card { background: var(--surface); border-radius: var(--radius-sm); padding: 10px; border: 1px solid var(--border); }
+  .res-card.big { grid-column: 1 / -1; border-color: var(--border-strong); }
+  .res-card .rl { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+  .res-card .rv { font-size: 18px; font-weight: 500; }
+  .res-card.big .rv { font-size: 24px; }
+  .res-card .rs { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .bdown { border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .brow { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
+  .brow:last-child { border-bottom: none; }
+  .brow .bn { color: var(--text2); display: flex; align-items: center; gap: 5px; }
+  .brow .ba { color: var(--text); font-weight: 500; }
+  .brow.sub { border-top: 1px solid var(--border-strong); margin-top: 4px; padding-top: 6px; font-weight: 500; border-bottom: none; }
+  .afford { margin-top: 0.75rem; }
+  .aff-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 5px; }
+  .aff-bar { height: 5px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .aff-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .aff-fill.good { background: var(--accent); }
+  .aff-fill.warn { background: var(--warn); }
+  .aff-fill.over { background: var(--danger); }
+  .aff-msg { font-size: 11px; margin-top: 5px; }
+
+  /* Council tax panel */
+  .lu-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+  .lu-row .field { flex: 1; margin-bottom: 0; }
+  .lu-btn { height: 34px; padding: 0 14px; font-size: 12px; font-weight: 500; cursor: pointer; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text); display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: background 0.15s; }
+  .lu-btn:hover { background: var(--surface2); }
+  .lu-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--text3); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status { font-size: 12px; padding: 8px 11px; border-radius: var(--radius-sm); margin-bottom: 10px; display: none; align-items: flex-start; gap: 7px; line-height: 1.5; }
+  .status.success { background: var(--accent-light); color: var(--accent-text); display: flex; }
+  .status.error { background: var(--danger-light); color: var(--danger); display: flex; }
+  .status.loading { background: var(--surface2); color: var(--text2); display: flex; }
+
+  .band-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 0.75rem; display: none; }
+  .band-table.show { display: table; }
+  .band-table th { font-size: 11px; font-weight: 500; color: var(--text3); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-strong); }
+  .band-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  .band-table tr:last-child td { border-bottom: none; }
+  .band-table tr.active td { background: #e8f5ee; color: var(--accent-text); font-weight: 500; }
+  .band-table td:last-child { color: var(--text3); font-size: 12px; }
+
+  .apply-btn { width: 100%; margin-top: 0.85rem; padding: 9px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--accent); border: none; border-radius: var(--radius-sm); color: white; transition: opacity 0.15s; display: none; align-items: center; justify-content: center; gap: 6px; }
+  .apply-btn:hover { opacity: 0.88; }
+  .apply-btn.show { display: flex; }
+
+  .src-note { font-size: 11px; color: var(--text3); margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); line-height: 1.6; display: none; }
+  .src-note.show { display: block; }
+
+  .breakdown-detail { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: none; }
+  .breakdown-detail.show { display: block; }
+  .breakdown-detail h4 { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
+  .precept-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .precept-row:last-child { border-bottom: none; font-weight: 500; }
+  .precept-row .pn { color: var(--text2); }
+  .precept-row .pa { color: var(--text); }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    .api-banner { flex-direction: column; align-items: flex-start; }
+    .api-banner input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1><i class="ti ti-building" style="vertical-align:-3px;margin-right:6px;color:#1a8c5c;"></i>Renting calculator</h1>
+  <p>Enter property details and look up real council tax rates for any local authority</p>
+</div>
+
+  <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+  <button class="api-save-btn" onclick="saveApiKey()">Save key</button>
+</div>
+
+<div class="layout">
+
+  <!-- ── LEFT: Calculator ───────────────────────────── -->
+  <div class="panel">
+    <div class="panel-title"><i class="ti ti-calculator"></i> Renting calculator</div>
+    <div class="panel-desc">Fill in the property details to work out your true monthly cost</div>
+
+    <div class="sec-label">Property</div>
+    <div class="field">
+      <label>Monthly rent</label>
+      <div class="pfx-wrap"><span class="pfx">£</span><input type="number" id="rentAmt" placeholder="1,200" min="0" step="50" oninput="calc()" /></div>
+    </div>
+    <div class="field">
+      <label>Bedrooms</label>
+      <select id="bedrooms" onchange="updateEnergy()">
+        <option value="0">Studio</option>
+        <option value="1" selected>1 bed</option>
+        <option value="2">2 bed</option>
+        <option value="3">3 bed</option>
+        <option value="4">4+ bed</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>EPC rating</label>
+      <select id="epcRating" onchange="updateEnergy()">
+        <option value="A">A — very efficient</option>
+        <option value="B">B — efficient</option>
+        <option value="C" selected>C — above average</option>
+        <option value="D">D — average</option>
+        <option value="E">E — below average</option>
+        <option value="F">F — poor</option>
+        <option value="G">G — very poor</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Council tax band</label>
+      <select id="ctBand" onchange="onBandChange()">
+        <option value="A">Band A</option><option value="B">Band B</option><option value="C">Band C</option>
+        <option value="D" selected>Band D</option><option value="E">Band E</option>
+        <option value="F">Band F</option><option value="G">Band G</option><option value="H">Band H</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Annual council tax <span class="looked-up" id="ctax_tag" style="display:none;">looked up</span></label>
+      <div class="pfx-wrap"><span class="pfx">£</span><input type="number" id="annualCtax" placeholder="use lookup →" min="0" step="50" oninput="calc()" /></div>
+    </div>
+    <div class="field">
+      <label>Tenants splitting costs</label>
+      <select id="tenants" onchange="calc()">
+        <option value="1" selected>Just me</option>
+        <option value="2">2 people</option>
+        <option value="3">3 people</option>
+        <option value="4">4 people</option>
+      </select>
+    </div>
+
+    <div class="sec-label">Bills <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);">estimated from EPC &amp; bedrooms</span></div>
+    <div class="toggle-row">
+      <div><div class="tl-text"><i class="ti ti-bolt" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:#f59f00;"></i>Gas &amp; electricity</div><div class="tl-sub" id="sub_energy">EPC C · 1-bed estimate</div></div>
+      <div class="tl-right"><div class="pfx-sm"><span class="p">£</span><input type="number" id="val_energy" value="95" min="0" step="5" oninput="calc()" /></div><label class="sw"><input type="checkbox" id="tog_energy" checked onchange="calc()"><span class="sw-track"></span></label></div>
+    </div>
+    <div class="toggle-row">
+      <div><div class="tl-text"><i class="ti ti-droplet" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:#3b82f6;"></i>Water</div><div class="tl-sub">Average UK household</div></div>
+      <div class="tl-right"><div class="pfx-sm"><span class="p">£</span><input type="number" id="val_water" value="35" min="0" step="5" oninput="calc()" /></div><label class="sw"><input type="checkbox" id="tog_water" checked onchange="calc()"><span class="sw-track"></span></label></div>
+    </div>
+    <div class="toggle-row">
+      <div><div class="tl-text"><i class="ti ti-wifi" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:#8b5cf6;"></i>Broadband</div><div class="tl-sub">Standard fibre contract</div></div>
+      <div class="tl-right"><div class="pfx-sm"><span class="p">£</span><input type="number" id="val_broadband" value="35" min="0" step="5" oninput="calc()" /></div><label class="sw"><input type="checkbox" id="tog_broadband" checked onchange="calc()"><span class="sw-track"></span></label></div>
+    </div>
+    <div class="toggle-row">
+      <div><div class="tl-text"><i class="ti ti-device-tv" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:#6b7280;"></i>TV licence</div><div class="tl-sub">£169.50/yr</div></div>
+      <div class="tl-right"><div class="pfx-sm"><span class="p">£</span><input type="number" id="val_tv" value="14" min="0" step="1" oninput="calc()" /></div><label class="sw"><input type="checkbox" id="tog_tv" checked onchange="calc()"><span class="sw-track"></span></label></div>
+    </div>
+
+    <div class="sec-label">Your income <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);">optional — affordability check</span></div>
+    <div class="field">
+      <label>Monthly take-home pay</label>
+      <div class="pfx-wrap"><span class="pfx">£</span><input type="number" id="income" placeholder="2,500" min="0" step="100" oninput="calc()" /></div>
+    </div>
+
+    <button class="btn" onclick="calc()"><i class="ti ti-calculator"></i> Calculate total costs</button>
+
+    <div class="results" id="results">
+      <div class="res-grid">
+        <div class="res-card big"><div class="rl">Total per month</div><div class="rv" id="r_total">£—</div><div class="rs" id="r_per"></div></div>
+        <div class="res-card"><div class="rl">Rent</div><div class="rv" id="r_rent">£—</div></div>
+        <div class="res-card"><div class="rl">Bills &amp; utilities</div><div class="rv" id="r_bills">£—</div></div>
+        <div class="res-card"><div class="rl">Council tax</div><div class="rv" id="r_council">£—</div><div class="rs">per month</div></div>
+      </div>
+      <div class="bdown" id="bdown"></div>
+      <div class="afford" id="afford" style="display:none;">
+        <div class="aff-head"><span>Affordability</span><span id="aff_pct"></span></div>
+        <div class="aff-bar"><div class="aff-fill" id="aff_fill" style="width:0%"></div></div>
+        <div class="aff-msg" id="aff_msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: Council tax lookup ─────────────────── -->
+  <div class="panel">
+    <div class="panel-title"><i class="ti ti-receipt-tax"></i> Council tax rates</div>
+    <div class="panel-desc">Search any local authority for real 2025/26 rates across all bands</div>
+
+    <div class="lu-row">
+      <div class="field">
+        <label>Local authority</label>
+        <input type="text" id="laInput" placeholder="e.g. South Cambridgeshire" style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;width:100%;" />
+      </div>
+      <button class="lu-btn" id="luBtn" onclick="lookupRates()"><i class="ti ti-search" style="font-size:13px;"></i> Look up</button>
+    </div>
+
+    <div class="status" id="luStatus"></div>
+
+    <table class="band-table" id="bandTable">
+      <thead><tr><th>Band</th><th>Property value (1991)</th><th>Annual</th><th>Monthly</th></tr></thead>
+      <tbody id="bandBody"></tbody>
+    </table>
+
+    <button class="apply-btn" id="applyBtn" onclick="applyRates()">
+      <i class="ti ti-arrow-left" style="font-size:13px;"></i> Apply Band D to calculator
+    </button>
+
+    <div class="breakdown-detail" id="preceptDetail">
+      <h4><i class="ti ti-list" style="font-size:13px;vertical-align:-2px;margin-right:4px;"></i>How Band D is made up</h4>
+      <div id="preceptRows"></div>
+    </div>
+
+    <div class="src-note" id="srcNote"></div>
+  </div>
+
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────
+const EPC = { A:[42,52,62,76,95], B:[52,67,82,100,125], C:[70,95,118,145,178], D:[92,122,155,192,232], E:[118,158,200,248,298], F:[148,198,250,308,368], G:[182,244,308,380,454] };
+const RATIOS = { A:6/9, B:7/9, C:8/9, D:1, E:11/9, F:13/9, G:15/9, H:18/9 };
+const BAND_RANGES = { A:'Up to £40k', B:'£40k–£52k', C:'£52k–£68k', D:'£68k–£88k', E:'£88k–£120k', F:'£120k–£160k', G:'£160k–£320k', H:'Over £320k' };
+const BILLS = ['energy','water','broadband','tv'];
+const BILL_LABELS = { energy:'Gas & electricity', water:'Water', broadband:'Broadband', tv:'TV licence' };
+const BILL_ICONS = { energy:'ti-bolt', water:'ti-droplet', broadband:'ti-wifi', tv:'ti-device-tv' };
+
+let storedRates = null;
+let storedBandD = null;
+let storedPrecepts = null;
+
+function g(id) { return document.getElementById(id); }
+function n(id) { return parseFloat(g(id).value) || 0; }
+
+// ── ENERGY ESTIMATE ────────────────────────────────────
+function updateEnergy() {
+  const epc = g('epcRating').value;
+  const beds = Math.min(parseInt(g('bedrooms').value) || 1, 4);
+  g('val_energy').value = (EPC[epc] || EPC['C'])[beds];
+  const bedLabels = ['studio','1-bed','2-bed','3-bed','4-bed'];
+  g('sub_energy').textContent = `EPC ${epc} · ${bedLabels[beds]} estimate (Ofgem rates)`;
+  calc();
+}
+
+// ── BAND CHANGE ────────────────────────────────────────
+function onBandChange() {
+  if (storedRates) {
+    const band = g('ctBand').value;
+    // Highlight active row
+    document.querySelectorAll('#bandBody tr').forEach(tr => {
+      tr.classList.toggle('active', tr.dataset.band === band);
+    });
+    g('applyBtn').textContent = `← Apply Band ${band} (£${storedRates[band].toLocaleString()}/yr) to calculator`;
+  }
+  calc();
+}
+
+// ── APPLY TO CALCULATOR ────────────────────────────────
+function applyRates() {
+  if (!storedRates) return;
+  const band = g('ctBand').value;
+  const annual = storedRates[band];
+  g('annualCtax').value = annual;
+  g('ctax_tag').style.display = 'inline';
+  const inp = g('annualCtax');
+  inp.classList.add('flash');
+  setTimeout(() => inp.classList.remove('flash'), 1200);
+  calc();
+}
+
+// ── COUNCIL TAX LOOKUP ─────────────────────────────────
+async function lookupRates() {
+  const authority = g('laInput').value.trim();
+  if (!authority) { showStatus('error', '<i class="ti ti-alert-circle"></i> Please enter a local authority name.'); return; }
+
+  const btn = g('luBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  showStatus('loading', '<span class="spinner"></span>&nbsp; Searching for ' + authority + ' rates…');
+  g('bandTable').classList.remove('show');
+  g('applyBtn').classList.remove('show');
+  g('srcNote').classList.remove('show');
+  g('preceptDetail').classList.remove('show');
+
+  try {
+    const prompt = `Find the 2025/26 council tax rates for "${authority}" in England. Search the council's official website and GOV.UK.
+
+I need:
+1. The Band D total (all precepts combined: county council, district council, police, fire, combined authority)
+2. A breakdown of each precept and its amount
+3. The source URL
+
+Return ONLY valid JSON, no markdown:
+{
+  "authority": "full official name",
+  "bandD": number,
+  "year": "2025/26",
+  "precepts": [
+    {"name": "e.g. County Council", "amount": number},
+    {"name": "e.g. District Council", "amount": number},
+    {"name": "e.g. Police", "amount": number},
+    {"name": "e.g. Fire", "amount": number}
+  ],
+  "source": "URL or site name",
+  "found": true
+}`;
+
+    const resp = await fetch('/api/anthropic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+
+    if (!resp.ok) throw new Error('Proxy ' + resp.status);
+    const data = await resp.json();
+    if (!data.text) throw new Error('no text');
+
+    const info = JSON.parse(data.text.replace(/```json|```/g, '').trim());
+    if (!info.found || !info.bandD) throw new Error('not found');
+
+    // Build rates for all bands
+    storedBandD = info.bandD;
+    storedRates = {};
+    ['A','B','C','D','E','F','G','H'].forEach(b => {
+      storedRates[b] = Math.round(info.bandD * RATIOS[b]);
+    });
+    storedPrecepts = info.precepts || [];
+
+    // Render band table
+    const activeBand = g('ctBand').value;
+    let rows = '';
+    ['A','B','C','D','E','F','G','H'].forEach(b => {
+      const annual = storedRates[b];
+      const monthly = Math.round(annual / 12);
+      const active = b === activeBand ? 'class="active"' : '';
+      rows += `<tr ${active} data-band="${b}">
+        <td><strong>Band ${b}</strong></td>
+        <td style="color:var(--text3);font-size:12px;">${BAND_RANGES[b]}</td>
+        <td>£${annual.toLocaleString()}</td>
+        <td>£${monthly}/mo</td>
+      </tr>`;
+    });
+    g('bandBody').innerHTML = rows;
+    g('bandTable').classList.add('show');
+
+    // Apply button
+    g('applyBtn').innerHTML = `<i class="ti ti-arrow-left" style="font-size:13px;"></i> Apply Band ${activeBand} (£${storedRates[activeBand].toLocaleString()}/yr) to calculator`;
+    g('applyBtn').classList.add('show');
+
+    // Precept breakdown
+    if (storedPrecepts.length) {
+      let prows = '';
+      storedPrecepts.forEach(p => {
+        prows += `<div class="precept-row"><span class="pn">${p.name}</span><span class="pa">£${Math.round(p.amount).toLocaleString()}</span></div>`;
+      });
+      prows += `<div class="precept-row"><span class="pn">Total Band D</span><span class="pa">£${Math.round(info.bandD).toLocaleString()}</span></div>`;
+      g('preceptRows').innerHTML = prows;
+      g('preceptDetail').classList.add('show');
+    }
+
+    // Source note
+    g('srcNote').textContent = `Source: ${info.source || 'web search'} · ${info.year || '2025/26'} · Bands A–H calculated from Band D using statutory ratios. Excludes parish precept (varies by village).`;
+    g('srcNote').classList.add('show');
+
+    showStatus('success', `<i class="ti ti-circle-check"></i> ${info.authority} — Band D £${Math.round(info.bandD).toLocaleString()}/yr (${info.year || '2025/26'})`);
+
+  } catch(e) {
+    console.error(e);
+    showStatus('error', '<i class="ti ti-alert-circle"></i> Could not find rates — try a more specific name (e.g. "South Cambridgeshire District Council") or check your network connection.');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-search" style="font-size:13px;"></i> Look up';
+}`;
+    });
+
+    if (!resp.ok) throw new Error('API ' + resp.status);
+    const data = await resp.json();
+    const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('');
+    if (!text) throw new Error('no text response');
+    const info = JSON.parse(text.replace(/```json|```/g, '').trim());
+    if (!info.found || !info.bandD) throw new Error('not found');
+
+    // Build rates for all bands
+    storedBandD = info.bandD;
+    storedRates = {};
+    ['A','B','C','D','E','F','G','H'].forEach(b => {
+      storedRates[b] = Math.round(info.bandD * RATIOS[b]);
+    });
+    storedPrecepts = info.precepts || [];
+
+    // Render band table
+    const activeBand = g('ctBand').value;
+    let rows = '';
+    ['A','B','C','D','E','F','G','H'].forEach(b => {
+      const annual = storedRates[b];
+      const monthly = Math.round(annual / 12);
+      const active = b === activeBand ? 'class="active"' : '';
+      rows += `<tr ${active} data-band="${b}">
+        <td><strong>Band ${b}</strong></td>
+        <td style="color:var(--text3);font-size:12px;">${BAND_RANGES[b]}</td>
+        <td>£${annual.toLocaleString()}</td>
+        <td>£${monthly}/mo</td>
+      </tr>`;
+    });
+    g('bandBody').innerHTML = rows;
+    g('bandTable').classList.add('show');
+
+    // Apply button
+    const applyBand = activeBand;
+    g('applyBtn').innerHTML = `<i class="ti ti-arrow-left" style="font-size:13px;"></i> Apply Band ${applyBand} (£${storedRates[applyBand].toLocaleString()}/yr) to calculator`;
+    g('applyBtn').classList.add('show');
+
+    // Precept breakdown
+    if (storedPrecepts.length) {
+      let prows = '';
+      let total = 0;
+      storedPrecepts.forEach(p => {
+        total += p.amount;
+        prows += `<div class="precept-row"><span class="pn">${p.name}</span><span class="pa">£${Math.round(p.amount).toLocaleString()}</span></div>`;
+      });
+      prows += `<div class="precept-row"><span class="pn">Total Band D</span><span class="pa">£${Math.round(info.bandD).toLocaleString()}</span></div>`;
+      g('preceptRows').innerHTML = prows;
+      g('preceptDetail').classList.add('show');
+    }
+
+    // Source note
+    g('srcNote').textContent = `Source: ${info.source || 'web search'} · ${info.year || '2025/26'} · Bands A–H calculated from Band D using statutory ratios. Excludes parish precept (varies by village).`;
+    g('srcNote').classList.add('show');
+
+    showStatus('success', `<i class="ti ti-circle-check"></i> ${info.authority} — Band D £${Math.round(info.bandD).toLocaleString()}/yr (${info.year || '2025/26'})`);
+
+  } catch(e) {
+    console.error(e);
+    showStatus('error', '<i class="ti ti-alert-circle"></i> Could not find rates — try a more specific name (e.g. "South Cambridgeshire District Council") or check your network connection.');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-search" style="font-size:13px;"></i> Look up';
+}
+
+function showStatus(type, html) {
+  const el = g('luStatus');
+  el.className = 'status ' + type;
+  el.innerHTML = html;
+}
+
+document.getElementById('laInput').addEventListener('keydown', e => { if (e.key === 'Enter') lookupRates(); });
+
+// ── MAIN CALCULATOR ────────────────────────────────────
+function calc() {
+  const rent = n('rentAmt');
+  const tenants = parseInt(g('tenants').value) || 1;
+  const councilMonthly = n('annualCtax') / 12;
+
+  let billsTotal = 0;
+  const billsDetail = [];
+  BILLS.forEach(b => {
+    const tog = g('tog_' + b), val = n('val_' + b);
+    if (tog && tog.checked && val > 0) {
+      billsTotal += val;
+      billsDetail.push({ label: BILL_LABELS[b], icon: BILL_ICONS[b], amount: val });
+    }
+  });
+
+  const total = rent + billsTotal + councilMonthly;
+  const perPerson = total / tenants;
+
+  g('r_total').textContent = '£' + Math.round(total).toLocaleString();
+  g('r_rent').textContent = '£' + Math.round(rent).toLocaleString();
+  g('r_bills').textContent = '£' + Math.round(billsTotal).toLocaleString();
+  g('r_council').textContent = '£' + Math.round(councilMonthly).toLocaleString();
+  g('r_per').textContent = tenants > 1 ? '£' + Math.round(perPerson).toLocaleString() + ' per person' : 'this month';
+
+  let bhtml = '';
+  bhtml += `<div class="brow"><span class="bn"><i class="ti ti-home" style="font-size:12px;"></i> Rent</span><span class="ba">£${Math.round(rent).toLocaleString()}</span></div>`;
+  bhtml += `<div class="brow"><span class="bn"><i class="ti ti-receipt-tax" style="font-size:12px;"></i> Council tax</span><span class="ba">£${Math.round(councilMonthly).toLocaleString()}/mo</span></div>`;
+  billsDetail.forEach(b => {
+    bhtml += `<div class="brow"><span class="bn"><i class="ti ${b.icon}" style="font-size:12px;"></i> ${b.label}</span><span class="ba">£${Math.round(b.amount).toLocaleString()}</span></div>`;
+  });
+  if (tenants > 1) {
+    bhtml += `<div class="brow sub"><span class="bn">Your share (÷${tenants})</span><span class="ba">£${Math.round(perPerson).toLocaleString()}/mo</span></div>`;
+  }
+  g('bdown').innerHTML = bhtml;
+
+  const income = n('income');
+  if (income > 0) {
+    g('afford').style.display = 'block';
+    const pct = Math.round((perPerson / income) * 100);
+    g('aff_fill').style.width = Math.min(pct, 100) + '%';
+    g('aff_fill').className = 'aff-fill ' + (pct <= 33 ? 'good' : pct <= 45 ? 'warn' : 'over');
+    g('aff_pct').textContent = pct + '% of take-home';
+    const [msg, col] = pct <= 33
+      ? ['✓ Under the recommended 33% threshold — looks affordable.', 'var(--accent)']
+      : pct <= 45
+      ? ['⚠ Between 33–45% of income — manageable but tight.', 'var(--warn)']
+      : ['✗ Over 45% of income — limited headroom.', 'var(--danger)'];
+    g('aff_msg').textContent = msg;
+    g('aff_msg').style.color = col;
+  } else {
+    g('afford').style.display = 'none';
+  }
+
+  g('results').classList.add('show');
+}
+
+// Init
+updateEnergy();
+calc();
+</script>
+</body>
+</html>
