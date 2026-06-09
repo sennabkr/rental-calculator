@@ -121,6 +121,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="panel-title"><i class="ti ti-calculator"></i> Renting calculator</div>
     <div class="panel-desc">Fill in the property details to work out your true monthly cost</div>
 
+    <div class="sec-label">Import from listing <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);">Rightmove or Zoopla</span></div>
+    <div class="lu-row">
+      <div class="field">
+        <label>Listing URL</label>
+        <input type="text" id="listingUrl" placeholder="https://www.rightmove.co.uk/properties/..." style="font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;width:100%;" />
+      </div>
+      <button class="lu-btn" id="extractBtn" onclick="extractListing()"><i class="ti ti-download" style="font-size:13px;"></i> Extract</button>
+    </div>
+    <div class="status" id="extractStatus"></div>
+
     <div class="sec-label">Property</div>
     <div class="field">
       <label>Monthly rent</label>
@@ -376,6 +386,85 @@ async function lookupRates() {
 document.getElementById('laInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') lookupRates();
 });
+
+document.getElementById('listingUrl').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') extractListing();
+});
+
+async function extractListing() {
+  const url = g('listingUrl').value.trim();
+  const st = g('extractStatus');
+  if (!url) {
+    st.className = 'status error';
+    st.innerHTML = '<i class="ti ti-alert-circle"></i> Please paste a Rightmove or Zoopla URL.';
+    return;
+  }
+  if (!/rightmove\.co\.uk|zoopla\.co\.uk/i.test(url)) {
+    st.className = 'status error';
+    st.innerHTML = '<i class="ti ti-alert-circle"></i> That does not look like a Rightmove or Zoopla URL.';
+    return;
+  }
+
+  const btn = g('extractBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  st.className = 'status loading';
+  st.innerHTML = '<span class="spinner"></span>&nbsp; Searching for this listing...';
+
+  const prompt = 'Search the web for this UK rental property listing and extract its details: ' + url + ' . Find the monthly rent (pcm), number of bedrooms, EPC rating (A-G), council tax band (A-H), and the local authority/council area. Many listings do not show EPC or council tax band - only return values you actually find, use null otherwise. Return ONLY valid JSON, no markdown, no explanation: {"rent_pcm":number or null,"bedrooms":number or null,"epc":"A-G" or null,"councilTaxBand":"A-H" or null,"localAuthority":"name" or null,"address":"short address" or null,"found":true if you found the listing at all}';
+
+  try {
+    const resp = await fetch('/api/anthropic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    });
+    if (!resp.ok) throw new Error('Proxy error ' + resp.status);
+    const data = await resp.json();
+    if (!data.text) throw new Error('No response');
+
+    const cleaned = data.text.split('').filter(function(c){return c !== String.fromCharCode(96);}).join('').replace(/^json/i,'').trim();
+    const info = JSON.parse(cleaned);
+
+    const found = [];
+    const missing = [];
+
+    if (info.rent_pcm) { g('rentAmt').value = Math.round(info.rent_pcm); found.push('rent'); }
+    else missing.push('rent');
+
+    if (info.bedrooms != null) { g('bedrooms').value = Math.min(info.bedrooms, 4); found.push('bedrooms'); }
+
+    if (info.epc) { g('epcRating').value = info.epc.toUpperCase(); found.push('EPC'); }
+    else missing.push('EPC');
+
+    if (info.councilTaxBand) { g('ctBand').value = info.councilTaxBand.toUpperCase(); found.push('council tax band'); }
+    else missing.push('council tax band');
+
+    // If we got a local authority, pre-fill the lookup box
+    if (info.localAuthority) { g('laInput').value = info.localAuthority; }
+
+    updateEnergy();
+
+    if (found.length === 0) {
+      st.className = 'status error';
+      st.innerHTML = '<i class="ti ti-alert-circle"></i> Could not find details for this listing. Please enter them manually below.';
+    } else {
+      st.className = 'status success';
+      let msg = '<i class="ti ti-circle-check"></i> Found: ' + found.join(', ') + '.';
+      if (missing.length) msg += ' Not shown on listing: ' + missing.join(', ') + ' — please add manually.';
+      if (info.localAuthority) msg += ' Tip: hit "Look up" on the right to get real council tax rates for ' + info.localAuthority + '.';
+      st.innerHTML = msg;
+    }
+
+  } catch(e) {
+    console.error(e);
+    st.className = 'status error';
+    st.innerHTML = '<i class="ti ti-alert-circle"></i> Could not read this listing (sites often block this). Please enter the details manually below.';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-download" style="font-size:13px;"></i> Extract';
+}
 
 function calc() {
   const rent = n('rentAmt');
